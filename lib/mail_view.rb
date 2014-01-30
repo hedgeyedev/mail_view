@@ -21,8 +21,10 @@ class MailView
     end
   end
 
+  attr_accessor :request
+
   def call(env)
-    request = Rack::Request.new(env)
+    self.request = Rack::Request.new(env)
 
     if request.path_info == "" || request.path_info == "/"
       links = self.actions.map do |action|
@@ -35,8 +37,6 @@ class MailView
       name, ext = $1, $2
       format = Rack::Mime.mime_type(ext, nil)
       missing_format = ext && format.nil?
-
-      email_addr = email_regex.match(request.params["email"]) ? request.params["email"] : nil
 
       if actions.include?(name) && !missing_format
         mail = build_mail(name)
@@ -133,6 +133,10 @@ class MailView
       elsif matching_content_type && mail.content_type.to_s.match(matching_content_type)
         mail
       end
+    end
+
+    def email_addr
+      email_regex.match(request.params["email"]) ? request.params["email"] : nil
     end
 
     def email_regex
