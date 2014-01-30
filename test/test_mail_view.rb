@@ -198,9 +198,7 @@ class TestMailView < Test::Unit::TestCase
     assert_match 'Another Peek <another@foo.com>', unescaped_body
   end
 
-  def test_html_message
-    Net::SMTP.expects(:new).never
-    get '/html_message'
+  def html_message_asserts
     assert last_response.ok?
     assert_match iframe_src_match('text/html'), last_response.body
     assert_no_match %r(View as), last_response.body
@@ -208,6 +206,12 @@ class TestMailView < Test::Unit::TestCase
     get '/html_message?part=text%2Fhtml'
     assert last_response.ok?
     assert_equal '<h1>Hello</h1>', last_response.body
+  end
+
+  def test_html_message
+    Net::SMTP.expects(:new).never
+    get '/html_message'
+    html_message_asserts
   end
 
   def test_html_message_with_email_addr
@@ -215,11 +219,15 @@ class TestMailView < Test::Unit::TestCase
     Net::SMTP.expects(:new).returns(mock_smtp)
     mock_smtp.expects(:start)
     get '/html_message?email=barack@whitehouse.gov'
+    html_message_asserts
+  end
+
+  def nested_multipart_message_asserts
     assert last_response.ok?
     assert_match iframe_src_match('text/html'), last_response.body
-    assert_no_match %r(View as), last_response.body
+    assert_match %r(View as), last_response.body
 
-    get '/html_message?part=text%2Fhtml'
+    get '/nested_multipart_message?part=text%2Fhtml'
     assert last_response.ok?
     assert_equal '<h1>Hello</h1>', last_response.body
   end
@@ -227,13 +235,7 @@ class TestMailView < Test::Unit::TestCase
   def test_nested_multipart_message
     Net::SMTP.expects(:new).never
     get '/nested_multipart_message'
-    assert last_response.ok?
-    assert_match iframe_src_match('text/html'), last_response.body
-    assert_match %r(View as), last_response.body
-
-    get '/nested_multipart_message?part=text%2Fhtml'
-    assert last_response.ok?
-    assert_equal '<h1>Hello</h1>', last_response.body
+    nested_multipart_message_asserts
   end
 
   def test_nested_multipart_message_with_email_addr
@@ -241,18 +243,10 @@ class TestMailView < Test::Unit::TestCase
     Net::SMTP.expects(:new).returns(mock_smtp)
     mock_smtp.expects(:start)
     get '/nested_multipart_message?email=abe.lincoln@whitehouse.gov'
-    assert last_response.ok?
-    assert_match iframe_src_match('text/html'), last_response.body
-    assert_match %r(View as), last_response.body
-
-    get '/nested_multipart_message?part=text%2Fhtml'
-    assert last_response.ok?
-    assert_equal '<h1>Hello</h1>', last_response.body
+    nested_multipart_message_asserts
   end
 
-  def test_multipart_alternative
-    Net::SMTP.expects(:new).never
-    get '/multipart_alternative'
+  def multipart_alternative_asserts
     assert last_response.ok?
     assert_match iframe_src_match('text/html'), last_response.body
     assert_match 'View as', last_response.body
@@ -260,6 +254,12 @@ class TestMailView < Test::Unit::TestCase
     get '/multipart_alternative?part=text%2Fhtml'
     assert last_response.ok?
     assert_equal '<h1>This is HTML</h1>', last_response.body
+  end
+
+  def test_multipart_alternative
+    Net::SMTP.expects(:new).never
+    get '/multipart_alternative'
+    multipart_alternative_asserts
   end
 
   def test_multipart_alternative_with_email_addr
@@ -267,11 +267,15 @@ class TestMailView < Test::Unit::TestCase
     Net::SMTP.expects(:new).returns(mock_smtp)
     mock_smtp.expects(:start)
     get '/multipart_alternative?email=g.washington@presidentshouse.gov'
+    multipart_alternative_asserts
+  end
+
+  def multipart_alternative_as_html_asserts
     assert last_response.ok?
     assert_match iframe_src_match('text/html'), last_response.body
     assert_match 'View as', last_response.body
 
-    get '/multipart_alternative?part=text%2Fhtml'
+    get '/multipart_alternative.html?part=text%2Fhtml'
     assert last_response.ok?
     assert_equal '<h1>This is HTML</h1>', last_response.body
   end
@@ -279,13 +283,7 @@ class TestMailView < Test::Unit::TestCase
   def test_multipart_alternative_as_html
     Net::SMTP.expects(:new).never
     get '/multipart_alternative.html'
-    assert last_response.ok?
-    assert_match iframe_src_match('text/html'), last_response.body
-    assert_match 'View as', last_response.body
-
-    get '/multipart_alternative.html?part=text%2Fhtml'
-    assert last_response.ok?
-    assert_equal '<h1>This is HTML</h1>', last_response.body
+    multipart_alternative_as_html_asserts
   end
 
   def test_multipart_alternative_as_html_with_email_addr
@@ -293,18 +291,10 @@ class TestMailView < Test::Unit::TestCase
     Net::SMTP.expects(:new).returns(mock_smtp)
     mock_smtp.expects(:start)
     get '/multipart_alternative.html?email=jfk@whitehouse.gov'
-    assert last_response.ok?
-    assert_match iframe_src_match('text/html'), last_response.body
-    assert_match 'View as', last_response.body
-
-    get '/multipart_alternative.html?part=text%2Fhtml'
-    assert last_response.ok?
-    assert_equal '<h1>This is HTML</h1>', last_response.body
+    multipart_alternative_as_html_asserts
   end
 
-  def test_multipart_alternative_as_text
-    Net::SMTP.expects(:new).never
-    get '/multipart_alternative.txt'
+  def multipart_alternative_as_text_asserts
     assert last_response.ok?
     assert_match iframe_src_match('text/plain'), last_response.body
     assert_match 'View as', last_response.body
@@ -312,6 +302,12 @@ class TestMailView < Test::Unit::TestCase
     get '/multipart_alternative.txt?part=text%2Fplain'
     assert last_response.ok?
     assert_equal 'This is plain text', last_response.body
+  end
+
+  def test_multipart_alternative_as_text
+    Net::SMTP.expects(:new).never
+    get '/multipart_alternative.txt'
+    multipart_alternative_as_text_asserts
   end
 
   def test_multipart_alternative_as_text_with_email_addr
@@ -319,13 +315,7 @@ class TestMailView < Test::Unit::TestCase
     Net::SMTP.expects(:new).returns(mock_smtp)
     mock_smtp.expects(:start)
     get '/multipart_alternative.txt?email=fdr@whitehouse.gov'
-    assert last_response.ok?
-    assert_match iframe_src_match('text/plain'), last_response.body
-    assert_match 'View as', last_response.body
-
-    get '/multipart_alternative.txt?part=text%2Fplain'
-    assert last_response.ok?
-    assert_equal 'This is plain text', last_response.body
+    multipart_alternative_as_text_asserts
   end
 
   def test_multipart_alternative_text_as_default
