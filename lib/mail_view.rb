@@ -21,10 +21,8 @@ class MailView
     end
   end
 
-  attr_accessor :request
-
   def call(env)
-    self.request = Rack::Request.new(env)
+    request = Rack::Request.new(env)
 
     if request.path_info == "" || request.path_info == "/"
       links = self.actions.map do |action|
@@ -40,6 +38,8 @@ class MailView
 
       if actions.include?(name) && !missing_format
         mail = build_mail(name)
+
+        email_addr = get_email_address(request.params["email"])
         if email_addr
           sendable = mail.dup
           sendable[:to] = email_addr
@@ -135,8 +135,8 @@ class MailView
       end
     end
 
-    def email_addr
-      email_regex.match(request.params["email"]) ? request.params["email"] : nil
+    def get_email_address(params_email)
+      email_regex.match(params_email) ? params_email : nil
     end
 
     def email_regex
